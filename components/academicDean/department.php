@@ -13,6 +13,16 @@ if (isset($_POST['submit'])) {
         $message = "Error: " . mysqli_error($conn);
     }
 }
+    if (isset($_POST['delete'])) {
+      $dept_id = $_POST['dept_id'];
+      $query = "DELETE FROM department WHERE id = '$dept_id' ";
+      $result = mysqli_query($conn, $query);
+      if ($result) {
+      $message = "Department Deleted successfully.";
+      } else {
+      $message = "Error: " . mysqli_error($conn);
+      }
+      }
 $department_query = "SELECT * FROM department";
 $department_result = mysqli_query($conn, $department_query);
 if (mysqli_num_rows($department_result) > 0) {
@@ -108,6 +118,7 @@ if (mysqli_num_rows($department_result) > 0) {
                   <th>Department Head</th>
                   <th>Office Location</th>
                   <th>Contact</th>
+                  <th class="text-center">Actions</th>
               </tr>
           </thead>
           <tbody>';
@@ -118,6 +129,24 @@ if (mysqli_num_rows($department_result) > 0) {
               <td>' . $row['head'] . '</td>
               <td>' . $row['office_location'] . '</td>
               <td>' . $row['contact'] . '</td>
+               <td class="text-center">
+                <div class="list-icons">
+                    <div class="dropdown">
+                        <a href="#" class="list-icons-item" data-toggle="dropdown">
+                            <i class="icon-menu9"></i>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right">
+                        <form method="POST" action="">
+                            <input type="hidden" name="dept_id" value="' .$row['id'].' ">
+                            <button type="submit" name = "delete" class="dropdown-item" onclick="return confirm("Are you sure you want to delete this admin?")">
+                                <i class="fas fa-trash-alt"></i> Delete Department
+                            </button>
+                        </form>
+                        </div>
+                    </div>
+                     
+                </div>
+            </td>
         </tr>
    ';
   }

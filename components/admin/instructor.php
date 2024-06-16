@@ -82,15 +82,28 @@ if (isset($_POST['deactivate'])) {
 }
 
 if (isset($_POST['delete'])) {
-    $id = $_POST['id'];
-    $query = "DELETE FROM users WHERE id = '$id' ";
-    $result = mysqli_query($conn, $query);
-    if ($result) {
-    $message = "Instructor Deleted successfully.";
-    } else {
-    $message = "Error: " . mysqli_error($conn);
-    }
-    }
+  $id = $_POST['id'];
+
+  try {
+      $query = "DELETE FROM users WHERE id = '$id'";
+      $result = mysqli_query($conn, $query);
+
+      if ($result) {
+          $message = "Instructor deleted successfully.";
+      } else {
+          throw new Exception("Unknown error occurred.");
+      }
+  } catch (mysqli_sql_exception $e) {
+      if ($e->getCode() == 1451) {
+          $message = "You cannot delete this instructor because they are assigned to a course. Please delete the course first.";
+      } else {
+          $message = "Error: " . $e->getMessage();
+      }
+  } catch (Exception $e) {
+      $message = "Error: " . $e->getMessage();
+  }
+}
+
 $instructor_query = "SELECT * FROM users WHERE role = 'Instructor' ";
 $instructor_result = mysqli_query($conn, $instructor_query);
 echo'  <div class="page-header page-header-light">

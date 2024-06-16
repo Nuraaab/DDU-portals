@@ -1,12 +1,13 @@
 <?php
 include '../../auth/connection.php';
 $instructors = [];
+$message ="";
 $result = mysqli_query($conn, "SELECT * FROM users WHERE role = 'Instructor' ");
 if ($result) {
   while ($row = mysqli_fetch_assoc($result)) {
-    $id = $row['id'];
-    $fullName = $row['first_name'] . ' ' . $row['last_name'];
-    $instructors[$id] = $fullName;
+      $id = $row['id'] . ',' . $row['department'];
+      $fullName = $row['first_name'] . ' ' . $row['last_name'];
+      $instructors[$id] = $fullName;
   }
 } else {
   echo "Error: " . mysqli_error($conn);
@@ -15,12 +16,18 @@ if (isset($_POST['submit'])) {
     $course_code = $_POST['course_code'];
     $course_name = $_POST['course_name'];
     $instructor = $_POST['instructor'];
+    $parts = explode(',', $instructor);
+    $id = trim($parts[0]); 
+    $department = trim($parts[1]); 
+    $query = mysqli_query($conn, "SELECT * FROM department WHERE dept_name = '$department' ");
+    $row = mysqli_fetch_assoc($query);
+    $dept_id = $row['id'];
     $credit_hour = $_POST['credit_hour'];
     $prerequisites = $_POST['prerequisites'];
     $credit_point = $_POST['credit_point'];
     $academic_year = $_POST['academic_year'];
     $semester = $_POST['semester'];
-    $query = "INSERT INTO courses (course_code, course_name, instructor_id, duration, prerequisites, credits, academic_year, semester) VALUES ('$course_code', '$course_name', '$instructor', '$credit_hour', '$prerequisites', '$credit_point', '$academic_year', '$semester')";
+    $query = "INSERT INTO courses (course_code, course_name, instructor_id, duration, prerequisites, credits, academic_year, semester, department_id) VALUES ('$course_code', '$course_name', '$id', '$credit_hour', '$prerequisites', '$credit_point', '$academic_year', '$semester', '$dept_id')";
     $result = mysqli_query($conn, $query);
     if ($result) {
         $message  = "Course Added successfully.";
@@ -28,7 +35,33 @@ if (isset($_POST['submit'])) {
         $message = "Error: " . mysqli_error($conn);
     }
 }
-$courses_query = "SELECT * FROM courses";
+if (isset($_POST['delete'])) {
+  $id = $_POST['course_id'];
+
+  try {
+      $query = "DELETE FROM courses WHERE id = '$id'";
+      $result = mysqli_query($conn, $query);
+
+      if ($result) {
+          $message = "Courses deleted successfully.";
+      } else {
+          throw new Exception("Unknown error occurred.");
+      }
+  } catch (mysqli_sql_exception $e) {
+      if ($e->getCode() == 1451) {
+          $message = "You cannot delete this Course because It is added in schedule. Please delete the schedule first.";
+      } else {
+          $message = "Error: " . $e->getMessage();
+      }
+  } catch (Exception $e) {
+      $message = "Error: " . $e->getMessage();
+  }
+}
+$courses_query = "
+    SELECT courses.*, users.first_name AS name 
+    FROM courses 
+    JOIN users ON courses.instructor_id = users.id
+";
 $courses_result = mysqli_query($conn, $courses_query);
 if (mysqli_num_rows($courses_result) > 0) {
   echo '
@@ -83,7 +116,7 @@ if (mysqli_num_rows($courses_result) > 0) {
                                             <select class="form-control form-control-outline select-search" data-fouc   placeholder="Placeholder" 
                                             name="instructor" required>';
                                             foreach ($instructors as $id => $fullName) {
-                                                echo '<option value="' . $id . '">' . $fullName . '</option>';
+                                                echo '<option value="' . $id . ', ">' . $fullName . '</option>';
                                               }
                                        echo' </select>
                                             <label class="label-floating">Select Instructor</label>
@@ -143,15 +176,22 @@ if (mysqli_num_rows($courses_result) > 0) {
   <div class="card">
  <div class="card-header">
   <h5>Hello ' . $_SESSION['first_name'] . '</h5>
-   </div>
-  <table class="table datatable-button-html5-columns">
+   </div>';
+    if($message!== ''){
+echo'<div class="card-header">
+<h5>' . $message. '</h5>
+ </div>';
+   }
+  echo'<table class="table datatable-button-html5-columns">
           <thead>
               <tr>
                   <th>#</th>
                   <th>Course Code</th>
                   <th>Course Name</th>
+                  <th>Instructor</th>
                   <th>Duration</th>
                   <th>Credit</th>
+                  <th class="text-center">Actions</th>
               </tr>
           </thead>
           <tbody>';
@@ -160,8 +200,27 @@ if (mysqli_num_rows($courses_result) > 0) {
               <th>' . $row['id'] . '</th>
               <td>' . $row['course_code'] . '</td>
               <td>' . $row['course_name'] . '</td>
+              <td>' . $row['name'] . '</td>
               <td>' . $row['duration'] . '</td>
               <td>' . $row['credits'] . '</td>
+               <td class="text-center">
+                <div class="list-icons">
+                    <div class="dropdown">
+                        <a href="#" class="list-icons-item" data-toggle="dropdown">
+                            <i class="icon-menu9"></i>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right">
+                        <form method="POST" action="">
+                            <input type="hidden" name="course_id" value="' .$row['id'].' ">
+                            <button type="submit" name = "delete" class="dropdown-item" onclick="return confirm("Are you sure you want to delete this admin?")">
+                                <i class="fas fa-trash-alt"></i> Delete Course
+                            </button>
+                        </form>
+                        </div>
+                    </div>
+                     
+                </div>
+            </td>
         </tr>
    ';
   }
